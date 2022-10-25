@@ -1,4 +1,4 @@
-module github.com/cloud66-oss/coredns_mysql
+module github.com/he-deng/coredns_postgresql
 
 go 1.16
 
