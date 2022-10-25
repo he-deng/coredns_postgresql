@@ -19,7 +19,7 @@ func (handler *CoreDNSPostgreSql) findRecord(zone string, name string, types ...
 	if name != zone {
 		query = strings.TrimSuffix(name, "."+zone)
 	}
-	sqlQuery := fmt.Sprintf("SELECT name, zone, ttl, record_type, content FROM %s WHERE zone = ? AND name = ? AND record_type IN ('%s')",
+	sqlQuery := fmt.Sprintf("SELECT name, zone, ttl, record_type, content FROM %s WHERE zone = $1 AND name = $2 AND record_type IN ('%s')",
 		handler.tableName,
 		strings.Join(types, "','"))
 	result, err := db.Query(sqlQuery, zone, query)
