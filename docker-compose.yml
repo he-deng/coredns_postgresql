@@ -1,0 +1,22 @@
+version: "3.9"
+   
+services:
+  postgresql:
+    image: postgres:14-alpine
+    environment:      
+      POSTGRES_PASSWORD: coredns
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+  coredns:
+    image: hbasria/coredns:1.11.1-postgresql
+    command: -conf /etc/coredns/Corefile
+    ports:
+      - "5053:53"
+      - "5053:53/udp"
+      - "9153:9153" # Expose metrics on port 9153
+    volumes:
+      - ./docker/Corefile:/etc/coredns/Corefile
+
+volumes:
+  postgresql-data: 
