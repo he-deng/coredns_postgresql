@@ -82,7 +82,7 @@ ENTRYPOINT ["/coredns"]
 then run
 
 ```shell script
-docker build -t hbasria/coredns:1.11.1-postgresql .
+docker build -t coredns:1.11.1-postgresql .
 ```
 
 

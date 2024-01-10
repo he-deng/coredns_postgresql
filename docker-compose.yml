@@ -9,7 +9,7 @@ services:
       - postgresql-data:/var/lib/postgresql/data
       - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
   coredns:
-    image: hbasria/coredns:1.11.1-postgresql
+    image: coredns:1.11.1-postgresql
     command: -conf /etc/coredns/Corefile
     ports:
       - "5053:53"
