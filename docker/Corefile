@@ -1,0 +1,29 @@
+.:53 {
+    log
+    errors
+    ready
+    forward . 1.1.1.1 8.8.8.8
+    cache 30
+    acl {
+        allow net 0.0.0.0/0
+    }
+    prometheus :9153
+}
+example.org:53 {
+    log
+    errors
+    health {
+        lameduck 5s
+    }
+    ready
+    
+    cache 30
+
+    acl {
+        allow net 0.0.0.0/0
+    }
+    postgresql {
+        datasource "host=postgresql user=postgres password=coredns dbname=postgres port=5432 sslmode=disable"
+        ttl 30
+    }
+}

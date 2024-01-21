@@ -12,7 +12,7 @@ This plugin uses PostgreSql as a backend to store DNS records. These will then c
 ## Syntax
 ```
 postgresql {
-    dsn DSN
+    datasource DATA_SOURCE
     [table_prefix TABLE_PREFIX]
     [max_lifetime MAX_LIFETIME]
     [max_open_connections MAX_OPEN_CONNECTIONS]
@@ -22,7 +22,7 @@ postgresql {
 }
 ```
 
-- `dsn` DSN for PostgreSql, for example `host=10.0.0.80 port=5432 user=py password=312 dbname=haspinfodb sslmode=disable`
+- `datasource` Datasource for PostgreSql, for example `host=127.0.0.1 port=5432 password=coredns sslmode=disable`
 - `table_prefix` Prefix for the PostgreSql tables. Defaults to `coredns_`.
 - `max_lifetime` Duration (in Golang format) for a SQL connection. Default is 1 minute.
 - `max_open_connections` Maximum number of open connections to the database server. Default is 10.
@@ -51,18 +51,53 @@ $ go build
 
 Add any required modules to CoreDNS code as prompted.
 
+## Build Docker image
+
+Add this `Dockerfile` file:
+
+```shell script
+ARG DEBIAN_IMAGE=debian:stable-slim
+ARG BASE=debian:stable-slim
+FROM ${DEBIAN_IMAGE} AS build
+SHELL [ "/bin/sh", "-ec" ]
+
+RUN export DEBCONF_NONINTERACTIVE_SEEN=true \
+           DEBIAN_FRONTEND=noninteractive \
+           DEBIAN_PRIORITY=critical \
+           TERM=linux ; \
+    apt-get -qq update ; \
+    apt-get -yyqq upgrade ; \
+    apt-get -yyqq install ca-certificates libcap2-bin; \
+    apt-get clean
+COPY coredns /coredns
+RUN setcap cap_net_bind_service=+ep /coredns
+
+FROM ${BASE}
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=build /coredns /coredns
+EXPOSE 53 53/udp
+ENTRYPOINT ["/coredns"]
+```
+
+then run
+
+```shell script
+docker build -t coredns:1.11.1-postgresql .
+```
+
+
 ## Database Setup
 This plugin doesn't create or migrate database schema for its use yet. To create the database and tables, use the following table structure (note the table name prefix):
 
 ```sql
-CREATE SEQUENCE coredns_records_myid_seq
+CREATE SEQUENCE coredns_records_id_seq
     INCREMENT 1
     MINVALUE 1
     MAXVALUE 9223372036854775807
     START 1
     CACHE 1;
 CREATE TABLE coredns_records (
-    id bigint DEFAULT nextval('coredns_records_myid_seq'::regclass) NOT NULL,
+    id bigint DEFAULT nextval('coredns_records_id_seq'::regclass) NOT NULL,
     zone VARCHAR(255) NOT NULL,
     name VARCHAR(255) NOT NULL,
     ttl INT DEFAULT NULL,
@@ -78,15 +113,15 @@ Each record served by this plugin, should belong to the zone it is allowed to se
 ```sql
 -- Insert batch #1
 INSERT INTO coredns_records (zone, name, ttl, content, record_type) VALUES
-('example.org.', 'foo', 30, '{"ip": "1.1.1.1"}', 'A'),
-('example.org.', 'foo', '60', '{"ip": "1.1.1.0"}', 'A'),
-('example.org.', 'foo', 30, '{"text": "hello"}', 'TXT'),
-('example.org.', 'foo', 30, '{"host" : "foo.example.org.","priority" : 10}', 'MX');
+('example.org.', '', 30, '{"ip": "1.1.1.1"}', 'A'),
+('example.org.', '', '60', '{"ip": "1.1.1.0"}', 'A'),
+('example.org.', 'test', 30, '{"text": "hello"}', 'TXT'),
+('example.org.', 'mail', 30, '{"host" : "mail.example.org.","priority" : 10}', 'MX');
 ```
 
 These can be queries using `dig` like this:
 
 ```shell script
-$ dig A MX foo.example.org 
+$ dig A MX mail.example.org 
 ```
 
